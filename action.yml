@@ -18,9 +18,21 @@ inputs:
     description: "Version of Kubernetes to validate manifests against"
     default: "master"
     required: false
+  logLevel:
+    description: "Only show log messages at or above level (defined by zerolog)"
+    default: "debug"
+    required: false
+  logJson:
+    description: "Produce JSON log messages"
+    default: "false"
+    required: false
   ignoreMissingSchemas:
     description: "Skip files with missing schemas instead of failing"
     default: "false"
+    required: false
+  helmUpdateDeps:
+    description: "Update helm dependencies before templating (e.g. helm dep build)"
+    default: "true"
     required: false
 
 runs:
@@ -30,9 +42,12 @@ runs:
     KUBECONFORM_STRICT: "${{ inputs.strict }}"
     ADDITIONAL_SCHEMA_PATHS: "${{ inputs.additionalSchemaPaths }}"
     CHARTS_DIRECTORY: "${{ inputs.chartsDirectory }}"
-    HELM_UPDATE_DEPENDENCIES: "true"
+    HELM_UPDATE_DEPENDENCIES: "${{ inputs.helmUpdateDeps }}"
     KUBERNETES_VERSION: "${{ inputs.kubernetesVersion }}"
     IGNORE_MISSING_SCHEMAS: "${{ inputs.ignoreMissingSchemas }}"
+    LOG_LEVEL: "${{ inputs.logLevel }}"
+    LOG_JSON: "${{ inputs.logJson }}"
+  args: []
 
 branding:
   color: blue
