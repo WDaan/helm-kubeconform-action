@@ -16,6 +16,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
+	"golang.org/x/tools/go/cfg"
 )
 
 const (
@@ -34,8 +35,7 @@ type Config struct {
 	Kubeconform           Path   `env:"KUBECONFORM"`
 	Helm                  Path   `env:"HELM"`
 	UpdateDependencies    bool   `env:"HELM_UPDATE_DEPENDENCIES"`
-	LogLevel              string `env:"LOG_LEVEL" envDefault:"debug"`
-	LogJson               bool   `env:"LOG_JSON" envDefault:"true"`
+	ignoreMissing         bool 	 `env:"IGNORE_MISSING_SCHEMAS" envDefault:"false"`
 }
 
 func main() {
@@ -52,18 +52,7 @@ func main() {
 		return
 	}
 
-	if !cfg.LogJson {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
-	}
-
-	level, err := zerolog.ParseLevel(cfg.LogLevel)
-
-	if err != nil {
-		log.Fatal().Stack().Err(err).Msgf("%+v\n", err)
-		return
-	}
-
-	zerolog.SetGlobalLevel(level)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 
 	log.Trace().Msgf("Config: %s", cfg)
 
@@ -109,6 +98,7 @@ func run(cfg Config, additionalSchemaPaths []string, updateDependencies bool) er
 			// <https://github.com/yannh/kubeconform/blob/dcc77ac3a39ed1fb538b54fab57bbe87d1ece490/cmd/kubeconform/main.go#L47>,
 			// so instead we shell out to it
 			output, err := runKubeconform(manifests, cfg.Kubeconform.path, cfg.Strict, additionalSchemaPaths, cfg.KubernetesVersion)
+			output, err := runKubeconform(manifests, cfg, additionalSchemaPaths)
 
 			fileLogger.Info().Msgf("Output: %s", output)
 
@@ -177,8 +167,8 @@ func runHelmUpdateDependencies(path string, directory string) error {
 	return cmd.Run()
 }
 
-func runKubeconform(manifests bytes.Buffer, path string, strict bool, additionalSchemaPaths []string, kubernetesVersion string) (string, error) {
-	cmd := kubeconformCommand(path, strict, additionalSchemaPaths, kubernetesVersion)
+func runKubeconform(manifests bytes.Buffer, cfg Config, additionalSchemaPaths []string) (string, error) {
+	cmd := kubeconformCommand(cfg.Kubeconform.path, cfg, additionalSchemaPaths)
 
 	stdin, err := cmd.StdinPipe()
 
@@ -202,21 +192,25 @@ func runKubeconform(manifests bytes.Buffer, path string, strict bool, additional
 	return string(output[:]), err
 }
 
-func kubeconformCommand(path string, strict bool, additionalSchemaPaths []string, kubernetesVersion string) *exec.Cmd {
-	return exec.Command(path, kubeconformArgs(strict, additionalSchemaPaths, kubernetesVersion)...)
+func kubeconformCommand(path string, cfg Config, additionalSchemaPaths []string) *exec.Cmd {
+	return exec.Command(path, kubeconformArgs(cfg, additionalSchemaPaths)...)
 }
 
-func kubeconformArgs(strict bool, additionalSchemaPaths []string, kubernetesVersion string) []string {
+func kubeconformArgs(cfg Config, additionalSchemaPaths []string) []string {
 	args := []string{
 		"-schema-location",
 		"default",
 		"-summary",
 		"-kubernetes-version",
-		kubernetesVersion,
+		cfg.KubernetesVersion,
 	}
 
-	if strict {
+	if cfg.Strict {
 		args = append(args, "-strict")
+	}
+
+	if cfg.ignoreMissing {
+		args = append(args, "-ignore-missing-schemas")
 	}
 
 	for _, location := range additionalSchemaPaths {

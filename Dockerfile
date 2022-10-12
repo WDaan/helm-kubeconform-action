@@ -1,6 +1,6 @@
-ARG GO_VERSION=1.16.5
+ARG GO_VERSION=1.19.2
 
-ARG KUBECONFORM_VERSION=v0.4.11
+ARG KUBECONFORM_VERSION=v0.4.14
 
 FROM golang:$GO_VERSION-alpine AS builder
 
@@ -14,7 +14,7 @@ FROM ghcr.io/yannh/kubeconform:$KUBECONFORM_VERSION-alpine AS kubeconform
 # for curl & unzip
 FROM alpine:3.14 AS downloader
 
-ARG HELM_VERSION=v3.7.0
+ARG HELM_VERSION=v3.9.4
 
 RUN apk add -q --no-cache curl
 

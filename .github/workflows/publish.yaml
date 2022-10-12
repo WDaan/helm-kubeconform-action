@@ -1,40 +1,51 @@
 name: Build and publish to ghcr.io
 
 on:
-  - push
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 env:
-  image: ghcr.io/shivjm/helm-kubeconform-action
-  go: "1.18.3"
-  helm: "v3.9.4"
-  schema: "master"
-  kubeconform: "v0.4.14"
+  IMAGE: ghcr.io/${{ github.repository }}
+  HELM_VERSION: v3.9.4
+  K8S_SCHEMA_UPSTREAM: "master"
+  KUBECONFORM_VERSION: "v0.4.14"
+  GO_VERSION: "1.19.2"
 
 jobs:
-  docker:
+  build:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@master
+      - name: sanitize version
+        run: |
+          VERSION=${{github.ref_name}}
+          echo "VERSION=${VERSION:1}" >> $GITHUB_ENV
+      
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: ${{ env.image }}
+          images: ${{ env.IMAGE }}
           labels: |
-            tools.helm.version=${{ env.helm }}
-            tools.kubeconform.version=${{ env.kubeconform }}
-            kubernetes.schema.version=${{ env.schema }}
+            tools.helm.version=${{ env.HELM_VERSION }}
+            tools.kubeconform.version=${{ env.KUBECONFORM_VERSION }}
+            kubernetes.schema.version=${{ env.K8S_SCHEMA_UPSTREAM }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern=v{{version}}
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
+     
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v2
@@ -42,10 +53,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            GO_VERSION=${{ env.go }}
-            KUBECONFORM_VERSION=${{ env.kubeconform }}
-            HELM_VERSION=${{ env.helm }}
-            SCHEMA_REVISION=${{ env.schema }}
+            GO_VERSION=${{ env.GO_VERSION }}
+            KUBECONFORM_VERSION=${{ env.KUBECONFORM_VERSION }}
+            HELM_VERSION=${{ env.HELM_VERSION }}
+            SCHEMA_REVISION=${{ env.K8S_SCHEMA_UPSTREAM }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
-          push: "${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}"
