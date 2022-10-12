@@ -1,4 +1,4 @@
-name: "Helm Kubeconform"
+name: "Kubeconform action"
 description: "Generate manifests with `helm template` and run `kubeconform` on the results"
 author: "WDaan"
 inputs:
