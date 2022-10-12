@@ -16,7 +16,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
-	"golang.org/x/tools/go/cfg"
 )
 
 const (
@@ -35,7 +34,7 @@ type Config struct {
 	Kubeconform           Path   `env:"KUBECONFORM"`
 	Helm                  Path   `env:"HELM"`
 	UpdateDependencies    bool   `env:"HELM_UPDATE_DEPENDENCIES"`
-	ignoreMissing         bool 	 `env:"IGNORE_MISSING_SCHEMAS" envDefault:"false"`
+	ignoreMissing         bool   `env:"IGNORE_MISSING_SCHEMAS" envDefault:"false"`
 }
 
 func main() {
@@ -97,7 +96,6 @@ func run(cfg Config, additionalSchemaPaths []string, updateDependencies bool) er
 			// reimplement its CLI
 			// <https://github.com/yannh/kubeconform/blob/dcc77ac3a39ed1fb538b54fab57bbe87d1ece490/cmd/kubeconform/main.go#L47>,
 			// so instead we shell out to it
-			output, err := runKubeconform(manifests, cfg.Kubeconform.path, cfg.Strict, additionalSchemaPaths, cfg.KubernetesVersion)
 			output, err := runKubeconform(manifests, cfg, additionalSchemaPaths)
 
 			fileLogger.Info().Msgf("Output: %s", output)

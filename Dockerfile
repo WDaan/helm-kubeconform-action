@@ -1,18 +1,19 @@
 ARG GO_VERSION=1.19.2
-
 ARG KUBECONFORM_VERSION=v0.4.14
 
 FROM golang:$GO_VERSION-alpine AS builder
 
-COPY go.mod go.sum main.go /usr/local/src/app/
+WORKDIR /usr/local/src/app/
+COPY . .
 
-RUN cd /usr/local/src/app/ && CGO_ENABLED=0 GOOS=linux go build -tags netgo -ldflags '-w' .
+RUN apk add --update make
+RUN make build
 
 FROM ghcr.io/yannh/kubeconform:$KUBECONFORM_VERSION-alpine AS kubeconform
 
 # no need to parametrize the version of Alpine Linux as it’s only used
 # for curl & unzip
-FROM alpine:3.14 AS downloader
+FROM alpine:3.16 AS downloader
 
 ARG HELM_VERSION=v3.9.4
 
