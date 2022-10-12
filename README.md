@@ -39,6 +39,27 @@ jobs:
         kubernetesVersion: "1.25.0"
 ```
 
+## Example usage with docker (faster)
+```yaml
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Validate Helm Chart
+      uses: docker://ghcr.io/wdaan/helm-kubeconform-action:v0.1.7
+      env:
+        ADDITIONAL_SCHEMA_PATHS: |
+          schemas/{{ .ResourceKind }}.json
+        CHARTS_DIRECTORY: "charts"
+        KUBECONFORM_STRICT: "true"
+        HELM_UPDATE_DEPENDENCIES: "true"
+        IGNORE_MISSING_SCHEMAS: "false"
+        KUBERNETES_VERSION: "1.25.0"
+```
+
 [See action.yml for more information on the parameters.](action.yml)
 
 ### Schemas
