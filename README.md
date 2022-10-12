@@ -29,9 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-
-    - name: Generate and validate releases
-      uses: shivjm/helm-kubeconform-action@v0.2.0
+    - name: Validate Helm Chart
+      uses: wdaan/helm-kubeconform-action@v0.1.4
       with:
         additionalSchemaPaths: |
           schemas/{{ .ResourceKind }}.json
@@ -57,5 +56,5 @@ Every chart subdirectory must have a `tests` subdirectory
 containing values files [as you would pass to
 Helm](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 Each file will be passed on its own to `helm template release
-charts/<var>chart</var>` and the results will be validated by
+charts/MY_CHART` and the results will be validated by
 Kubeconform.
