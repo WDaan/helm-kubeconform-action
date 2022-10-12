@@ -61,10 +61,11 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           push: true
 
-      - uses: marvinpinto/action-automatic-releases@latest
+        # TODO: release binaries?
+      - name: Publish Release
+        uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
           files: |
             README.md
-            *.tgz
