@@ -36,7 +36,7 @@ type Config struct {
 	UpdateDependencies    bool   `env:"HELM_UPDATE_DEPENDENCIES"`
 	LogLevel              string `env:"LOG_LEVEL" envDefault:"debug"`
 	LogJson               bool   `env:"LOG_JSON" envDefault:"true"`
-	ignoreMissing         bool   `env:"IGNORE_MISSING_SCHEMAS" envDefault:"false"`
+	IgnoreMissingSchemas  bool   `env:"IGNORE_MISSING_SCHEMAS" envDefault:"false"`
 }
 
 func main() {
@@ -220,7 +220,7 @@ func kubeconformArgs(cfg Config, additionalSchemaPaths []string) []string {
 		args = append(args, "-strict")
 	}
 
-	if cfg.ignoreMissing {
+	if cfg.IgnoreMissingSchemas {
 		args = append(args, "-ignore-missing-schemas")
 	}
 
