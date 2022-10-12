@@ -34,6 +34,8 @@ type Config struct {
 	Kubeconform           Path   `env:"KUBECONFORM"`
 	Helm                  Path   `env:"HELM"`
 	UpdateDependencies    bool   `env:"HELM_UPDATE_DEPENDENCIES"`
+	LogLevel              string `env:"LOG_LEVEL" envDefault:"debug"`
+	LogJson               bool   `env:"LOG_JSON" envDefault:"true"`
 	ignoreMissing         bool   `env:"IGNORE_MISSING_SCHEMAS" envDefault:"false"`
 }
 
@@ -51,7 +53,18 @@ func main() {
 		return
 	}
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+	if !cfg.LogJson {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+	}
+
+	level, err := zerolog.ParseLevel(cfg.LogLevel)
+
+	if err != nil {
+		log.Fatal().Stack().Err(err).Msgf("%+v\n", err)
+		return
+	}
+
+	zerolog.SetGlobalLevel(level)
 
 	log.Trace().Msgf("Config: %s", cfg)
 

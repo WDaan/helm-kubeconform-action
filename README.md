@@ -36,6 +36,7 @@ jobs:
           schemas/{{ .ResourceKind }}.json
         chartsDirectory: "charts"
         ignoreMissingSchemas: "true"
+        kubernetesVersion: "1.25.0"
 ```
 
 [See action.yml for more information on the parameters.](action.yml)
