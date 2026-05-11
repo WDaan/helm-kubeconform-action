@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/WDaan/helm-kubeconform-action/compare/v1.0.1...v1.1.0) (2026-05-11)
+
+
+### Features
+
+* add optional fallback to chart default values when no test values files exist ([#9](https://github.com/WDaan/helm-kubeconform-action/issues/9)) ([bfb7dff](https://github.com/WDaan/helm-kubeconform-action/commit/bfb7dff0d0d1bdea0fdb89409d5ab52103f91d8c))
+
+
+### Bug Fixes
+
+* invalid YAML escape in action.yml default value for regexSkipDir ([#7](https://github.com/WDaan/helm-kubeconform-action/issues/7)) ([b37a471](https://github.com/WDaan/helm-kubeconform-action/commit/b37a471766be05bb31a0a4e3c961791ca35e8289))
+
 ## [1.0.1](https://github.com/WDaan/helm-kubeconform-action/compare/v1.0.0...v1.0.1) (2026-05-11)
 
 
