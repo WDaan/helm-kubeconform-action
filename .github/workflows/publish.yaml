@@ -7,10 +7,10 @@ on:
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}
-  HELM_VERSION: v3.9.4
+  HELM_VERSION: v3.10.1
   K8S_SCHEMA_UPSTREAM: "master"
   KUBECONFORM_VERSION: "v0.4.14"
-  GO_VERSION: "1.19.2"
+  GO_VERSION: "1.24.13"
 
 jobs:
   build:
@@ -22,7 +22,7 @@ jobs:
           VERSION=${{github.ref_name}}
           echo "VERSION=${VERSION:1}" >> $GITHUB_ENV
       
-      - name: zLogin to GitHub Container Registry
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
         with:
           registry: ghcr.io

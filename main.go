@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
-	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/caarlos0/env/v6"
@@ -30,6 +32,7 @@ type Config struct {
 	Strict                bool   `env:"KUBECONFORM_STRICT" envDefault:"true"`
 	AdditionalSchemaPaths []Path `env:"ADDITIONAL_SCHEMA_PATHS" envSeparator:"\n"`
 	ChartsDirectory       Path   `env:"CHARTS_DIRECTORY"`
+	RegexSkipDir          string `env:"REGEX_SKIP_DIR" envDefault:"\.git"`
 	KubernetesVersion     string `env:"KUBERNETES_VERSION" envDefault:"master"`
 	Kubeconform           Path   `env:"KUBECONFORM"`
 	Helm                  Path   `env:"HELM"`
@@ -60,7 +63,7 @@ func main() {
 	level, err := zerolog.ParseLevel(cfg.LogLevel)
 
 	if err != nil {
-		log.Fatal().Stack().Err(err).Msgf("%+v\n", err)
+		log.Fatal().Err(err).Msgf("Could not parse log level")
 		return
 	}
 
@@ -79,29 +82,46 @@ func main() {
 	feErr := run(cfg, additionalSchemaPaths, cfg.UpdateDependencies)
 
 	if feErr != nil {
-		log.Fatal().Stack().Err(feErr).Msgf("Validation failed: %s", feErr)
+		log.Fatal().Stack().Err(feErr).Msg("Validation failed")
 		return
 	}
 }
 
 func run(cfg Config, additionalSchemaPaths []string, updateDependencies bool) error {
-	return foreachChart(cfg.ChartsDirectory.path, func(base string) error {
-		logger := log.With().Str("chart", filepath.Base(base)).Logger()
-		valuesFiles, err := os.ReadDir(filepath.Join(base, TestsPath))
+	var validationsErrors []error
+	skipRegex := regexp.MustCompile("^" + cfg.RegexSkipDir + "$")
 
+	filepath.WalkDir(cfg.ChartsDirectory.path, func(path string, dirent fs.DirEntry, err error) error {
+		logger := log.With().Str("path", path).Logger()
 		if err != nil {
-			logger.Error().Stack().Err(err).Msgf("Could not open directory %s", base)
-			return err
+			logger.Warn().Err(err).Msg("skipping path")
+			return nil
 		}
 
-		for _, file := range valuesFiles {
-			name := file.Name()
-			fileLogger := logger.With().Str("file", name).Logger()
-			fileLogger.Printf("Validating chart %s with values file %s...\n", filepath.Base(base), name)
-			manifests, err := runHelm(cfg.Helm.path, base, name, updateDependencies)
+		if dirent.IsDir() && skipRegex.MatchString(dirent.Name()) {
+			logger.Info().Msg("matching skip regex, skipping")
+			return fs.SkipDir
+		}
+
+		if dirent.Name() != "Chart.yaml" && dirent.Name() != "Chart.yml" {
+			return nil
+		}
+
+		chartDir := filepath.Dir(path)
+		logger = log.With().Str("chart", filepath.Base(chartDir)).Logger()
+		filepath.WalkDir(filepath.Join(chartDir, TestsPath), func(valuesFile string, dirent fs.DirEntry, err error) error {
+			valuesLogger := logger.With().Str("values", dirent.Name()).Logger()
+			if err != nil {
+				valuesLogger.Err(err).Stack().Msg("Could not open directory")
+				return err
+			}
+			if dirent.Name() == TestsPath {
+				return nil
+			}
+			manifests, err := runHelm(cfg.Helm.path, chartDir, dirent.Name(), updateDependencies)
 
 			if err != nil {
-				fileLogger.Printf("Could not run Helm: %s\nStdout: %s\n", err, manifests.String())
+				valuesLogger.Err(err).Str("stdout", manifests.String()).Msg("Could not run Helm")
 				return err
 			}
 
@@ -109,36 +129,30 @@ func run(cfg Config, additionalSchemaPaths []string, updateDependencies bool) er
 			// reimplement its CLI
 			// <https://github.com/yannh/kubeconform/blob/dcc77ac3a39ed1fb538b54fab57bbe87d1ece490/cmd/kubeconform/main.go#L47>,
 			// so instead we shell out to it
-			output, err := runKubeconform(manifests, cfg, additionalSchemaPaths)
+			output, err := runKubeconform(manifests, cfg.Kubeconform.path, cfg.Strict, additionalSchemaPaths, cfg.KubernetesVersion, cfg.IgnoreMissingSchemas)
 
-			fileLogger.Info().Msgf("Output: %s", output)
+			// if kubeconform could not be executed, the output will not be
+			// in JSON format
+			var js json.RawMessage
+			if json.Unmarshal([]byte(output), &js) == nil {
+				valuesLogger.Err(err).RawJSON("kubeconform", output).Msg("kubeconform validation result")
+			} else {
+				valuesLogger.Err(err).Msgf("kubeconform failed: %s", output)
+			}
 
 			if err != nil {
-				return err
+				validationsErrors = append(validationsErrors, err)
 			}
-		}
 
-		return nil
+			return nil
+
+		})
+
+		return fs.SkipDir // We processed the chart, so skip its directory
 	})
-}
 
-func foreachChart(path string, fn func(path string) error) error {
-	files, err := os.ReadDir(path)
-
-	if err != nil {
-		return err
-	}
-
-	for _, file := range files {
-		if !file.IsDir() {
-			return errors.New(fmt.Sprintf("Non-directory file in charts directory: %s", file.Name()))
-		}
-
-		p := filepath.Join(path, file.Name())
-
-		if err := fn(p); err != nil {
-			return err
-		}
+	if validationsErrors != nil {
+		return errors.New("Validation failed")
 	}
 
 	return nil
@@ -178,13 +192,13 @@ func runHelmUpdateDependencies(path string, directory string) error {
 	return cmd.Run()
 }
 
-func runKubeconform(manifests bytes.Buffer, cfg Config, additionalSchemaPaths []string) (string, error) {
-	cmd := kubeconformCommand(cfg.Kubeconform.path, cfg, additionalSchemaPaths)
+func runKubeconform(manifests bytes.Buffer, path string, strict bool, additionalSchemaPaths []string, kubernetesVersion string, ignoreMissingSchemas bool) ([]byte, error) {
+	cmd := kubeconformCommand(path, strict, additionalSchemaPaths, kubernetesVersion, ignoreMissingSchemas)
 
 	stdin, err := cmd.StdinPipe()
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	go func() {
@@ -194,33 +208,29 @@ func runKubeconform(manifests bytes.Buffer, cfg Config, additionalSchemaPaths []
 
 	output, err := cmd.CombinedOutput()
 
-	// whatever the output is, we want to display it, and we want to return the error if there is one
-	if err != nil {
-		log.Printf("Failed to run kubeconform command %s: %s\n", cmd, string(output[:]))
-		return "", err
-	}
-
-	return string(output[:]), err
+	return output, err
 }
 
-func kubeconformCommand(path string, cfg Config, additionalSchemaPaths []string) *exec.Cmd {
-	return exec.Command(path, kubeconformArgs(cfg, additionalSchemaPaths)...)
+func kubeconformCommand(path string, strict bool, additionalSchemaPaths []string, kubernetesVersion string, ignoreMissingSchemas bool) *exec.Cmd {
+	return exec.Command(path, kubeconformArgs(strict, additionalSchemaPaths, kubernetesVersion, ignoreMissingSchemas)...)
 }
 
-func kubeconformArgs(cfg Config, additionalSchemaPaths []string) []string {
+func kubeconformArgs(strict bool, additionalSchemaPaths []string, kubernetesVersion string, ignoreMissingSchemas bool) []string {
 	args := []string{
 		"-schema-location",
 		"default",
 		"-summary",
 		"-kubernetes-version",
-		cfg.KubernetesVersion,
+		kubernetesVersion,
+		"-output",
+		"json",
 	}
 
-	if cfg.Strict {
+	if strict {
 		args = append(args, "-strict")
 	}
 
-	if cfg.IgnoreMissingSchemas {
+	if ignoreMissingSchemas {
 		args = append(args, "-ignore-missing-schemas")
 	}
 
