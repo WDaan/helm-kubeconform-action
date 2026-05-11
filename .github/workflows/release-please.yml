@@ -45,6 +45,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
       - uses: actions/checkout@v4
       - run: |
           go build .
