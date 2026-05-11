@@ -82,7 +82,7 @@ func main() {
 	feErr := run(cfg, additionalSchemaPaths, cfg.UpdateDependencies)
 
 	if feErr != nil {
-		log.Fatal().Stack().Err(feErr).Msg("")
+		log.Fatal().Stack().Err(feErr).Msg("Validation failed")
 		return
 	}
 }
@@ -107,21 +107,21 @@ func run(cfg Config, additionalSchemaPaths []string, updateDependencies bool) er
 			return nil
 		}
 
-		chart_dir := filepath.Dir(path)
-		logger = log.With().Str("chart", filepath.Base(chart_dir)).Logger()
-		filepath.WalkDir(filepath.Join(chart_dir, TestsPath), func(values_file string, dirent fs.DirEntry, err error) error {
-			logger := logger.With().Str("values", dirent.Name()).Logger()
+		chartDir := filepath.Dir(path)
+		logger = log.With().Str("chart", filepath.Base(chartDir)).Logger()
+		filepath.WalkDir(filepath.Join(chartDir, TestsPath), func(valuesFile string, dirent fs.DirEntry, err error) error {
+			valuesLogger := logger.With().Str("values", dirent.Name()).Logger()
 			if err != nil {
-				logger.Err(err).Stack().Msg("Could not open directory")
+				valuesLogger.Err(err).Stack().Msg("Could not open directory")
 				return err
 			}
 			if dirent.Name() == TestsPath {
 				return nil
 			}
-			manifests, err := runHelm(cfg.Helm.path, chart_dir, dirent.Name(), updateDependencies)
+			manifests, err := runHelm(cfg.Helm.path, chartDir, dirent.Name(), updateDependencies)
 
 			if err != nil {
-				logger.Err(err).Str("stdout", manifests.String()).Msg("Could not run Helm")
+				valuesLogger.Err(err).Str("stdout", manifests.String()).Msg("Could not run Helm")
 				return err
 			}
 
@@ -135,9 +135,9 @@ func run(cfg Config, additionalSchemaPaths []string, updateDependencies bool) er
 			// in JSON format
 			var js json.RawMessage
 			if json.Unmarshal([]byte(output), &js) == nil {
-				logger.Err(err).RawJSON("kubeconform", output).Msg("")
+				valuesLogger.Err(err).RawJSON("kubeconform", output).Msg("kubeconform validation result")
 			} else {
-				logger.Err(err).Msgf("kubeconform failed: %s", output)
+				valuesLogger.Err(err).Msgf("kubeconform failed: %s", output)
 			}
 
 			if err != nil {
