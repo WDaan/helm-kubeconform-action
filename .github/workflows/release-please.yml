@@ -39,15 +39,12 @@ jobs:
   build-and-upload:
     needs: [release-please]
     if: ${{ needs.release-please.outputs.release_created }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - uses: actions/checkout@v4
       - run: |
           go build .
       - name: Upload release artifact
