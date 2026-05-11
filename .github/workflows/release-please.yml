@@ -17,7 +17,7 @@ jobs:
       - name: Run Release Please
         uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
         id: release
       - uses: actions/checkout@v4
       - name: Tag major and minor versions
