@@ -16,7 +16,7 @@ inputs:
     required: true
   regexSkipDir:
     description: "Skip search in directories matching this regex"
-    default: "\.git"
+    default: '\.git'
     required: false
   kubernetesVersion:
     description: "Version of Kubernetes to validate manifests against"
