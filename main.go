@@ -29,18 +29,18 @@ type Path struct {
 }
 
 type Config struct {
-	Strict                bool   `env:"KUBECONFORM_STRICT" envDefault:"true"`
-	AdditionalSchemaPaths []Path `env:"ADDITIONAL_SCHEMA_PATHS" envSeparator:"\n"`
-	ChartsDirectory       Path   `env:"CHARTS_DIRECTORY"`
-	RegexSkipDir          string `env:"REGEX_SKIP_DIR" envDefault:"\.git"`
-	KubernetesVersion     string `env:"KUBERNETES_VERSION" envDefault:"master"`
-	Kubeconform           Path   `env:"KUBECONFORM"`
-	Helm                  Path   `env:"HELM"`
-	UpdateDependencies    bool   `env:"HELM_UPDATE_DEPENDENCIES"`
-	SkipTestsFallback     bool   `env:"HELM_SKIP_TESTS_FALLBACK" envDefault:"false"`
-	LogLevel              string `env:"LOG_LEVEL" envDefault:"debug"`
-	LogJson               bool   `env:"LOG_JSON" envDefault:"true"`
-	IgnoreMissingSchemas  bool   `env:"IGNORE_MISSING_SCHEMAS" envDefault:"false"`
+	Strict                  bool   `env:"KUBECONFORM_STRICT" envDefault:"true"`
+	AdditionalSchemaPaths   []Path `env:"ADDITIONAL_SCHEMA_PATHS" envSeparator:"\n"`
+	ChartsDirectory         Path   `env:"CHARTS_DIRECTORY"`
+	RegexSkipDir            string `env:"REGEX_SKIP_DIR" envDefault:"\.git"`
+	KubernetesVersion       string `env:"KUBERNETES_VERSION" envDefault:"master"`
+	Kubeconform             Path   `env:"KUBECONFORM"`
+	Helm                    Path   `env:"HELM"`
+	UpdateDependencies      bool   `env:"HELM_UPDATE_DEPENDENCIES"`
+	FallbackToDefaultValues bool   `env:"HELM_SKIP_TESTS_FALLBACK" envDefault:"false"`
+	LogLevel                string `env:"LOG_LEVEL" envDefault:"debug"`
+	LogJson                 bool   `env:"LOG_JSON" envDefault:"true"`
+	IgnoreMissingSchemas    bool   `env:"IGNORE_MISSING_SCHEMAS" envDefault:"false"`
 }
 
 func main() {
@@ -126,7 +126,7 @@ func run(cfg Config, additionalSchemaPaths []string, updateDependencies bool) er
 			valuesFiles = append(valuesFiles, filepath.Join(chartDir, TestsPath, valuesFile.Name()))
 		}
 
-		if len(valuesFiles) == 0 && cfg.SkipTestsFallback {
+		if len(valuesFiles) == 0 && cfg.FallbackToDefaultValues {
 			valuesFiles = append(valuesFiles, "")
 			logger.Info().Msg("No test values files found, falling back to chart default values")
 		} else if len(valuesFiles) == 0 {
@@ -137,7 +137,7 @@ func run(cfg Config, additionalSchemaPaths []string, updateDependencies bool) er
 		for _, valuesFile := range valuesFiles {
 			valuesLabel := filepath.Base(valuesFile)
 			if valuesFile == "" {
-				valuesLabel = "default-values"
+				valuesLabel = "defaultValues"
 			}
 
 			valuesLogger := logger.With().Str("values", valuesLabel).Logger()
