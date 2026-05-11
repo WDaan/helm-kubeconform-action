@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate Helm charts
-        uses: WDaan/helm-kubeconform-action@v0.3.0
+        uses: WDaan/helm-kubeconform-action@v1
         with:
           additionalSchemaPaths: |
             schemas/{{ .ResourceKind }}.json
