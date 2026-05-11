@@ -6,6 +6,24 @@ on:
       - main
 
 jobs:
+  validate-action-manifest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate action.yml is valid YAML
+        run: |
+          python3 - <<'EOF'
+          import yaml, sys
+          try:
+              yaml.safe_load(open('action.yml'))
+              print('action.yml is valid YAML')
+          except yaml.YAMLError as e:
+              print(f'YAML error in action.yml: {e}', file=sys.stderr)
+              sys.exit(1)
+          EOF
+
   lint-and-build:
     runs-on: ubuntu-latest
     permissions:
