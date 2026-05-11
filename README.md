@@ -1,67 +1,47 @@
 # Helm Kubeconform Action
 
-A flexible GitHub Action to validate [Helm
-charts](https://helm.sh/docs/topics/charts/) with
-[Kubeconform](https://github.com/yannh/kubeconform/). The target may
-be either a single chart directory or a directory containing multiple
-charts, at any level.
+A GitHub Action to validate [Helm charts](https://helm.sh/docs/topics/charts/)
+with [Kubeconform](https://github.com/yannh/kubeconform/).
+The target may be either a single chart directory or a directory containing
+multiple charts.
 
 ## Usage
 
-Assuming you have a `charts` directory under which you have a
-set of charts and a `schemas` directory containing any custom
-resource schemas, like this:
+Assuming you have a `charts` directory and a `schemas` directory
+containing any custom resource schemas:
 
 ```
 charts
-└───foo
-│  ├───templates
-│  └───tests
-└───bar
-│  ├───templates
-│  └───tests
-└───schemas
+├── foo
+│   ├── templates
+│   └── tests
+├── bar
+│   ├── templates
+│   └── tests
+└── schemas
 ```
 
 ## Example usage in workflow
 
 ```yaml
-name: Chart Test
+name: Chart validation
 on: [push] 
+
 jobs:
-    kubeconform:
+  kubeconform:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - name: Validate Helm Chart
-      uses: wdaan/helm-kubeconform-action@v0.1.6
-      with:
-        additionalSchemaPaths: |
-          schemas/{{ .ResourceKind }}.json
-        chartsDirectory: "charts"
-        ignoreMissingSchemas: "true"
-        kubernetesVersion: "1.25.0"
-```
-
-## Example usage with docker (faster)
-```yaml
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Validate Helm Chart
-      uses: docker://ghcr.io/wdaan/helm-kubeconform-action:v0.1.7
-      env:
-        ADDITIONAL_SCHEMA_PATHS: |
-          schemas/{{ .ResourceKind }}.json
-        CHARTS_DIRECTORY: "charts"
-        KUBECONFORM_STRICT: "true"
-        HELM_UPDATE_DEPENDENCIES: "true"
-        IGNORE_MISSING_SCHEMAS: "false"
-        KUBERNETES_VERSION: "1.25.0"
+      - uses: actions/checkout@v4
+      - name: Validate Helm charts
+        uses: WDaan/helm-kubeconform-action@v0.3.0
+        with:
+          additionalSchemaPaths: |
+            schemas/{{ .ResourceKind }}.json
+          chartsDirectory: charts
+          strict: "true"
+          helmUpdateDeps: "true"
+          ignoreMissingSchemas: "false"
+          kubernetesVersion: "1.30.0"
 ```
 
 [See action.yml for more information on the parameters.](action.yml)
@@ -81,6 +61,6 @@ These are relative to the root of your repository.
 Every chart subdirectory must have a `tests` subdirectory
 containing values files [as you would pass to
 Helm](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
-Each file will be passed on its own to `helm template release
-charts/MY_CHART` and the results will be validated by
+Each file will be passed on its own to
+`helm template release charts/MY_CHART` and the results will be validated by
 Kubeconform.
