@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/WDaan/helm-kubeconform-action/compare/v1.0.0...v1.0.1) (2026-05-11)
+
+
+### Bug Fixes
+
+* resolve release workflow `setup-go` failure by removing Windows matrix and modernizing action refs ([#5](https://github.com/WDaan/helm-kubeconform-action/issues/5)) ([5ad928d](https://github.com/WDaan/helm-kubeconform-action/commit/5ad928d757c2a2d10106ca9d385dd279ba9f64fc))
+
 ## [1.0.0](https://github.com/WDaan/helm-kubeconform-action/compare/v0.3.0...v1.0.0) (2026-05-11)
 
 
