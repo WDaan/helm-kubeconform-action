@@ -37,6 +37,7 @@ type Config struct {
 	Kubeconform           Path   `env:"KUBECONFORM"`
 	Helm                  Path   `env:"HELM"`
 	UpdateDependencies    bool   `env:"HELM_UPDATE_DEPENDENCIES"`
+	SkipTestsFallback     bool   `env:"HELM_SKIP_TESTS_FALLBACK" envDefault:"false"`
 	LogLevel              string `env:"LOG_LEVEL" envDefault:"debug"`
 	LogJson               bool   `env:"LOG_JSON" envDefault:"true"`
 	IgnoreMissingSchemas  bool   `env:"IGNORE_MISSING_SCHEMAS" envDefault:"false"`
@@ -109,20 +110,43 @@ func run(cfg Config, additionalSchemaPaths []string, updateDependencies bool) er
 
 		chartDir := filepath.Dir(path)
 		logger = log.With().Str("chart", filepath.Base(chartDir)).Logger()
-		filepath.WalkDir(filepath.Join(chartDir, TestsPath), func(valuesFile string, dirent fs.DirEntry, err error) error {
-			valuesLogger := logger.With().Str("values", dirent.Name()).Logger()
-			if err != nil {
-				valuesLogger.Err(err).Stack().Msg("Could not open directory")
-				return err
+		testValuesFiles, err := os.ReadDir(filepath.Join(chartDir, TestsPath))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			logger.Err(err).Stack().Msg("Could not open tests directory")
+			validationsErrors = append(validationsErrors, err)
+			return fs.SkipDir // We processed the chart, so skip its directory
+		}
+
+		valuesFiles := []string{}
+		for _, valuesFile := range testValuesFiles {
+			if valuesFile.IsDir() {
+				continue
 			}
-			if dirent.Name() == TestsPath {
-				return nil
+
+			valuesFiles = append(valuesFiles, filepath.Join(chartDir, TestsPath, valuesFile.Name()))
+		}
+
+		if len(valuesFiles) == 0 && cfg.SkipTestsFallback {
+			valuesFiles = append(valuesFiles, "")
+			logger.Info().Msg("No test values files found, falling back to chart default values")
+		} else if len(valuesFiles) == 0 {
+			logger.Info().Msg("No test values files found, skipping chart")
+			return fs.SkipDir // We processed the chart, so skip its directory
+		}
+
+		for _, valuesFile := range valuesFiles {
+			valuesLabel := filepath.Base(valuesFile)
+			if valuesFile == "" {
+				valuesLabel = "default-values"
 			}
-			manifests, err := runHelm(cfg.Helm.path, chartDir, dirent.Name(), updateDependencies)
+
+			valuesLogger := logger.With().Str("values", valuesLabel).Logger()
+			manifests, err := runHelm(cfg.Helm.path, chartDir, valuesFile, updateDependencies)
 
 			if err != nil {
 				valuesLogger.Err(err).Str("stdout", manifests.String()).Msg("Could not run Helm")
-				return err
+				validationsErrors = append(validationsErrors, err)
+				continue
 			}
 
 			// to use kubeconform as a library would need us to practically
@@ -143,10 +167,7 @@ func run(cfg Config, additionalSchemaPaths []string, updateDependencies bool) er
 			if err != nil {
 				validationsErrors = append(validationsErrors, err)
 			}
-
-			return nil
-
-		})
+		}
 
 		return fs.SkipDir // We processed the chart, so skip its directory
 	})
@@ -168,7 +189,7 @@ func runHelm(path string, directory string, valuesFile string, updateDependencie
 		}
 	}
 
-	cmd := helmTemplateCommand(path, directory, filepath.Join(directory, TestsPath, valuesFile))
+	cmd := helmTemplateCommand(path, directory, valuesFile)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
@@ -182,6 +203,10 @@ func runHelm(path string, directory string, valuesFile string, updateDependencie
 }
 
 func helmTemplateCommand(path string, directory string, valuesFile string) *exec.Cmd {
+	if valuesFile == "" {
+		return exec.Command(path, "template", "release", directory)
+	}
+
 	return exec.Command(path, "template", "release", directory, "-f", valuesFile)
 }
 

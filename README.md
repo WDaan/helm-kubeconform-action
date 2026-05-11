@@ -40,6 +40,7 @@ jobs:
           chartsDirectory: charts
           strict: "true"
           helmUpdateDeps: "true"
+          fallbackToDefaultValues: "false"
           ignoreMissingSchemas: "false"
           kubernetesVersion: "1.30.0"
 ```
@@ -64,3 +65,7 @@ Helm](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-instal
 Each file will be passed on its own to
 `helm template release charts/MY_CHART` and the results will be validated by
 Kubeconform.
+
+If a chart has no test values files and `fallbackToDefaultValues` is set to
+`true`, the action will fall back to running `helm template release
+charts/MY_CHART` with chart default values.

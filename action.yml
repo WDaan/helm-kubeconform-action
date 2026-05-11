@@ -38,6 +38,10 @@ inputs:
     description: "Update helm dependencies before templating (e.g. helm dep build)"
     default: "true"
     required: false
+  fallbackToDefaultValues:
+    description: "If true, run `helm template` with chart default values when no test values files are found"
+    default: "false"
+    required: false
 
 runs:
   using: "docker"
@@ -48,6 +52,7 @@ runs:
     CHARTS_DIRECTORY: "${{ inputs.chartsDirectory }}"
     REGEX_SKIP_DIR: "${{ inputs.regexSkipDir }}"
     HELM_UPDATE_DEPENDENCIES: "${{ inputs.helmUpdateDeps }}"
+    HELM_SKIP_TESTS_FALLBACK: "${{ inputs.fallbackToDefaultValues }}"
     KUBERNETES_VERSION: "${{ inputs.kubernetesVersion }}"
     IGNORE_MISSING_SCHEMAS: "${{ inputs.ignoreMissingSchemas }}"
     LOG_LEVEL: "${{ inputs.logLevel }}"
