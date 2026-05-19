@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/WDaan/helm-kubeconform-action/compare/v1.1.0...v1.2.0) (2026-05-19)
+
+
+### Features
+
+* add datreeioCrdCatalog input to resolve CRD schemas automatically ([#10](https://github.com/WDaan/helm-kubeconform-action/issues/10)) ([9031333](https://github.com/WDaan/helm-kubeconform-action/commit/9031333c9a7987b4daabc66186292e3dd0d07094))
+
 ## [1.1.0](https://github.com/WDaan/helm-kubeconform-action/compare/v1.0.1...v1.1.0) (2026-05-11)
 
 
