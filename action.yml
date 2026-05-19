@@ -42,6 +42,10 @@ inputs:
     description: "If true, run `helm template` with chart default values when no test values files are found"
     default: "false"
     required: false
+  datreeioCrdCatalog:
+    description: "If true, automatically resolve CRD schemas from the datreeio/CRDs-catalog. Adds a live schema location for every CRD group encountered during validation. Not suitable for air-gapped environments."
+    default: "false"
+    required: false
 
 runs:
   using: "docker"
@@ -53,6 +57,7 @@ runs:
     REGEX_SKIP_DIR: "${{ inputs.regexSkipDir }}"
     HELM_UPDATE_DEPENDENCIES: "${{ inputs.helmUpdateDeps }}"
     HELM_SKIP_TESTS_FALLBACK: "${{ inputs.fallbackToDefaultValues }}"
+    DATREEIO_CRD_CATALOG: "${{ inputs.datreeioCrdCatalog }}"
     KUBERNETES_VERSION: "${{ inputs.kubernetesVersion }}"
     IGNORE_MISSING_SCHEMAS: "${{ inputs.ignoreMissingSchemas }}"
     LOG_LEVEL: "${{ inputs.logLevel }}"
