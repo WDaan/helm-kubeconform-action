@@ -38,6 +38,7 @@ type Config struct {
 	Helm                    Path   `env:"HELM"`
 	UpdateDependencies      bool   `env:"HELM_UPDATE_DEPENDENCIES"`
 	FallbackToDefaultValues bool   `env:"HELM_SKIP_TESTS_FALLBACK" envDefault:"false"`
+	DatareeioCrdCatalog     bool   `env:"DATREEIO_CRD_CATALOG" envDefault:"false"`
 	LogLevel                string `env:"LOG_LEVEL" envDefault:"debug"`
 	LogJson                 bool   `env:"LOG_JSON" envDefault:"true"`
 	IgnoreMissingSchemas    bool   `env:"IGNORE_MISSING_SCHEMAS" envDefault:"false"`
@@ -76,6 +77,10 @@ func main() {
 
 	for _, path := range cfg.AdditionalSchemaPaths {
 		additionalSchemaPaths = append(additionalSchemaPaths, path.path)
+	}
+
+	if cfg.DatareeioCrdCatalog {
+		additionalSchemaPaths = append(additionalSchemaPaths, "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json")
 	}
 
 	log.Trace().Msgf("Additional schema paths: %s", additionalSchemaPaths)

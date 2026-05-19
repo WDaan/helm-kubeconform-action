@@ -57,6 +57,28 @@ the format expected by
 Kubeconform](https://github.com/yannh/kubeconform/blob/d536a659bdb20ee6d06ab55886b348cd1c0fa21b/Readme.md#overriding-schemas-location---crd-and-openshift-support).
 These are relative to the root of your repository.
 
+#### CRD schemas via datreeio catalog
+
+Set `datreeioCrdCatalog: "true"` to automatically resolve CRD schemas from the
+[datreeio/CRDs-catalog](https://github.com/datreeio/CRDs-catalog). This covers
+a large number of popular CRDs (Argo Rollouts, cert-manager, Crossplane, etc.)
+with no extra configuration:
+
+```yaml
+- name: Validate Helm charts
+  uses: WDaan/helm-kubeconform-action@v1
+  with:
+    chartsDirectory: charts
+    kubernetesVersion: "1.32.0"
+    datreeioCrdCatalog: "true"
+```
+
+Kubeconform resolves schemas on-demand per resource type during validation.
+Standard Kubernetes resources are unaffected — they resolve via the default
+schema location and never hit the catalog. This option requires outbound HTTPS
+access to `raw.githubusercontent.com` and is not suitable for air-gapped
+environments; use `additionalSchemaPaths` instead in those cases.
+
 ### Tests
 
 Every chart subdirectory must have a `tests` subdirectory
